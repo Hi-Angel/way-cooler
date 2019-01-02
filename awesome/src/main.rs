@@ -277,6 +277,16 @@ fn init_wayland() -> (Display, EventQueue, GlobalManager) {
         };
     wayland_obj::xdg_shell_init(xwm_base_proxy, ());
     event_queue.sync_roundtrip().unwrap();
+    use wayland_protocols::noop::interface_noop::{RequestsTrait, InterfaceNoop};
+    let mb_noop_global = globals.instantiate_auto::<InterfaceNoop>();
+    if let Result::Ok(noop_global) = mb_noop_global {
+        println!("noop: ok");
+        use wayland_client::Proxy;
+        let noop_global: Proxy<InterfaceNoop> = noop_global.implement(move |_, _: Proxy<InterfaceNoop>| {});
+        noop_global.request_noop();
+    } else {
+        println!("noop: wrong");
+    }
     (display, event_queue, globals)
 }
 

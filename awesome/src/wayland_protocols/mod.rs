@@ -2,3 +2,4 @@
 //! protocols used by Awesome to talk to Way Cooler.
 
 pub mod xdg_shell;
+pub mod noop;

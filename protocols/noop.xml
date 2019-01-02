@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="protocol_noop">
+  <interface name="interface_noop" version="1">
+    <request name="request_noop">
+    </request>
+    <event name="event_noop"> </event>
+  </interface>
+</protocol>
