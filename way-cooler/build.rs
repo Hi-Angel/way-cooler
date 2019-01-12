@@ -1,6 +1,13 @@
-use std::{env, fs, io::Write, path::Path, process::Command};
+extern crate wayland_scanner;
 
-fn main() { dump_git_version(); }
+use std::{env, fs, io::Write, path::{Path, PathBuf}, process::Command};
+
+const PROTOCOL_PATH: &'static str = "../protocols";
+
+fn main() {
+    dump_git_version();
+    build_wayland_protcols();
+}
 
 /// Writes the current git hash to a file that is read by Way Cooler
 ///
@@ -38,4 +45,24 @@ fn in_release_commit() -> bool {
                                     .output()
                                     .unwrap();
     result.status.success()
+}
+
+/// Build the wayland protcols that Way Cooler will use to talk to Awesome
+fn build_wayland_protcols() {
+    let protocols = fs::read_dir(PROTOCOL_PATH).expect("Protocol build path invalid.");
+    let out_dir = env::var("OUT_DIR").unwrap();
+    println!("cargo:rerun-if-changed={}", PROTOCOL_PATH); // rebuild on protocols change
+    let out_dir = Path::new(&out_dir);
+    for protocol_path in protocols {
+        let protocol_path: fs::DirEntry = protocol_path.unwrap();
+        let path: PathBuf = protocol_path.path().into();
+        let mut file_name: String = protocol_path.file_name().into_string().unwrap();
+        if let Some(extension) = file_name.find(".xml") {
+            file_name.truncate(extension);
+        }
+        wayland_scanner::generate_c_code(path.clone(),
+                                         out_dir.join(file_name.clone() + "_api.rs"),
+                                         wayland_scanner::Side::Server);
+        wayland_scanner::generate_c_interfaces(path, out_dir.join(file_name + "_interface.rs"));
+    }
 }
