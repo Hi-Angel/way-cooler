@@ -34,11 +34,14 @@
 
 extern crate env_logger;
 extern crate getopts;
+extern crate wayland_server;
 #[macro_use]
 extern crate log;
 extern crate nix;
 #[macro_use]
 pub(crate) extern crate wlroots;
+extern crate wayland_client;
+extern crate wayland_sys;
 
 mod cursor;
 mod input;
@@ -47,6 +50,7 @@ mod seat;
 mod shells;
 mod view;
 mod xwayland;
+mod wayland_protocols;
 
 pub use self::{cursor::*, input::*, output::*, seat::*, shells::*, view::*, xwayland::*};
 
@@ -60,6 +64,11 @@ use std::{env,
 use log::Level;
 use nix::sys::signal::{self, SaFlags, SigAction, SigHandler, SigSet};
 
+use wayland_server::sys::server::wl_global_create;
+use wayland_sys::server::wl_client;
+use nix::libc::c_void;
+use std::ptr::null_mut;
+use wayland_protocols::noop::interface_noop;
 use wlroots::{wlroots_dehandle, Compositor, CompositorBuilder, Cursor, CursorHandle,
               KeyboardHandle, OutputHandle, OutputLayout, OutputLayoutHandle, PointerHandle,
               XCursorManager};
@@ -154,6 +163,18 @@ fn main() {
     ensure_good_env();
     let compositor = setup_compositor();
     assert!(compositor.xwayland.is_some());
+
+    use wayland_server::commons::Interface;
+    let iface = interface_noop::InterfaceNoop::c_interface();
+    extern "C" fn noop_handler(_: *mut wl_client, _: *mut c_void, _: u32, _: u32) {
+        println!("DBG: noop_handler called");
+    }
+
+    unsafe {
+        wl_global_create(compositor.display as *mut wayland_sys::server::wl_display,
+                         iface, 1, null_mut(), noop_handler);
+    }
+
     compositor.run();
 }
 
